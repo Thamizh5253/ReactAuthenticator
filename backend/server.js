@@ -1,11 +1,23 @@
 const express = require("express");
+// const http = require("http");
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const app = express();
-const port = 3003;
-let likeCount = process.env.LIKE ? parseInt(process.env.LIKE, 10) : 0;
+
+const { connectToMongoDB } = require("./dblocal");
+
+const PORT = process.env.PORT || 5000;
+const DB = process.env.DB || "MERN1";
+
+let likes = 0;
+// const { MongoClient } = require("mongodb");
+
+// let likeCount = process.env.LIKE ? parseInt(process.env.LIKE, 10) : 0;
 // Middleware to parse JSON requests
 app.use(bodyParser.json());
+app.use(express.json());
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header(
@@ -14,78 +26,166 @@ app.use((req, res, next) => {
   );
   next();
 });
+
 // Enable CORS for all routes
 app.use(cors());
-// Simple array to store user credentials (for demonstration purposes)
-const users = [
-  { username: "user1", password: "password1" },
-  { username: "user2", password: "password2" },
-  { username: "tham", password: "123" },
-  { username: "Tom", password: "Jerry" },
-  { username: "Admin", password: "123" },
-];
 
-// Login route
-app.post("/login", (req, res) => {
+connectToMongoDB();
+// // Login route
+
+app.post("/login", async (req, res) => {
   const { uid, password } = req.body;
-  console.log(uid, password);
-  // Check if the provided credentials match any user
-  const user = users.find((u) => u.username === uid && u.password === password);
+  // console.log(uid, password);
 
-  if (user) {
-    // Successful login
-    res.status(200).json({ message: "Login successful" });
-  } else {
-    // Failed login
-    res.status(206).json({ message: "Invalid credentials" });
+  try {
+    // Connect to the MongoDB server
+    const client = await connectToMongoDB();
+
+    // Access the database
+    const database = client.db(DB);
+
+    // Access the collection
+    const collection = database.collection("login");
+
+    // Find the user by username
+    const user = await collection.findOne({ ruid: uid });
+
+    if (!user) {
+      // User not found
+      return res.status(201).json({ error: "Invalid credentials" });
+    }
+
+    // Compare the provided password with the hashed password in the database
+    const passwordMatch = await bcrypt.compare(password, user.rpassword);
+    // console.log(user.rpassword);
+    if (passwordMatch) {
+      // Passwords match, user is authenticated
+      res.status(200).json({ message: "Login successful" });
+    } else {
+      // Passwords do not match
+      res.status(201).json({ error: "Invalid credentials" });
+    }
+  } catch (error) {
+    console.error("Error during login:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-app.post("/signup", (req, res) => {
+app.post("/signup", async (req, res) => {
   const { ruid, rpassword } = req.body;
-  console.log(ruid, rpassword);
-  // Check if the provided credentials match any user
-  //   const user = users.find((u) => u.username === uid && u.password === password);
-  const existingUser = users.find((u) => u.username === ruid);
 
-  if (existingUser) {
-    res.status(200).json({ message: "Username already exists" });
-  } else {
-    //   Add the new user to the array
-    users.push({ username: ruid, password: rpassword });
-    console.log(users);
-    res.status(201).json({ message: "User created successfully" });
+  // console.log(ruid, rpassword);
+  try {
+    // Connect to the MongoDB server
+    const client = await connectToMongoDB();
+
+    // Access the database
+    const database = client.db(DB);
+
+    // Access the collection
+    const collection = database.collection("login");
+
+    // Insert user data into the collection
+    const existingUser = await collection.findOne({ ruid });
+
+    if (existingUser) {
+      // Username already exists
+      res.status(201).json({ message: "Username already exists" });
+    } else {
+      const hashedPassword = await bcrypt.hash(rpassword, saltRounds);
+
+      const result = await collection.insertOne({
+        ruid,
+        rpassword: hashedPassword,
+      });
+
+      console.log("User inserted:", result.acknowledged);
+
+      // Respond with a success message
+      res.status(200).json({ message: "User signed up successfully" });
+    }
+  } catch (error) {
+    // console.error("Error signing up:", error);
+    res.status(404).json({ error: "Internal Server Error" });
   }
 });
 
-// Simulating the like count
+app.post("/api/increment-like", async (req, res) => {
+  //  console.log(likeCount);
+  likes += 1;
 
-// Middleware to parse JSON requests
-app.use(express.json());
+  // var likeCount = req.body;
+  console.log("hello", likes);
+  // likeCount += 1;
+  try {
+    // Connect to the MongoDB server
+    const client = await connectToMongoDB();
 
-// Endpoint to get the like count
-app.get("/api/like-count", (req, res) => {
-  res.json({ likes: likeCount });
-  console.log(likeCount);
+    // Access the database
+    const database = client.db(DB);
+
+    // Access the collection
+    const collection = database.collection("like");
+
+    // Assuming you have a specific document you want to update (replace with your logic)
+    const filter = { mode: "launch" };
+
+    // Update the likeCount field by 1
+    const update = { $inc: { like: 1 } };
+
+    // Perform the update operation
+    const result = await collection.updateOne(filter, update);
+    // console.log(result);
+    // Respond with a success message or the updated document
+    res.status(200).json({ like: likes });
+  } catch (error) {
+    // console.error("Error updating like count:", error);
+    res.status(204).json({ error: "Internal Server Error" });
+  }
 });
 
-// Endpoint to increment the like count (for demonstration purposes)
-app.post("/api/increment-like", (req, res) => {
-  console.log(likeCount);
-  likeCount += 1;
-  res.status(200).json({ likes: likeCount });
-  console.log("after:", likeCount);
-});
+app.get("/api/like-count", async (req, res) => {
+  try {
+    // Connect to the MongoDB server
+    const client = await connectToMongoDB();
 
+    // Access the database
+    const database = client.db(DB);
+
+    // Access the collection
+    const collection = database.collection("like");
+
+    // Assuming you have a specific document you want to update (replace with your logic)
+    const result = await collection.findOne(
+      { mode: "launch" },
+      { _id: 1, like: 1, mode: 1 }
+    );
+    console.log(result);
+    likes = result.like;
+    if (result) {
+      res.status(200).json({ likes: result.like });
+    } else {
+      res.status(404).json({ error: "Document not found" });
+    }
+  } catch (error) {
+    console.error("Error fetching like count:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+
+  // res.json({ likes: likeCount });
+});
 // const data = {
 //   message: "Hello from the server!",
 // };
-// app.get("/api/data", (req, res) => {
+// app.get("/api", (req, res) => {
 //   res.json(data);
 // });
 
 // Start the server
+// const server = http.createServer(app);
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+module.exports = app;

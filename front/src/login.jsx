@@ -1,14 +1,18 @@
 import React, { useState } from "react";
 import "./login1.scss";
-
+import { Link } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
-
+// import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "react-toastify/dist/ReactToastify.css";
 
 import axios from "axios";
 
+// const history = useHistory();
+
 const Login = () => {
   const [credentials, setCredentials] = useState({ uid: "", password: "" });
+  const navigate = useNavigate();
   const handleUidChange = (event) => {
     setCredentials((prevCredentials) => ({
       ...prevCredentials,
@@ -34,8 +38,8 @@ const Login = () => {
     SetCpass(event.target.value);
   };
 
-  const handlePass = () => {
-    toast.error("🪲 There is a BUG in backend", {
+  const workingOn = () => {
+    toast.error("🛠️ We are working on this module", {
       position: "top-right",
       autoClose: 5000,
       hideProgressBar: false,
@@ -46,6 +50,7 @@ const Login = () => {
       theme: "light",
     });
   };
+
   const handlePassword = (event) => {
     setData((prevCredentials) => ({
       ...prevCredentials,
@@ -53,14 +58,11 @@ const Login = () => {
     }));
   };
 
-  const handleLogin = async () => {
-    // setCredentials(uid, password);
-    console.log(credentials);
-    // You can perform login logic here using uid and password
-    // console.log("Login clicked with UID:", uid, "and Password:", password);
+  const handleLogin = async (e) => {
+    e.preventDefault();
     try {
       const response = await axios.post(
-        "https://authen-app.vercel.app/login",
+        "http://localhost:5000/login",
         credentials
       );
       console.log(response.status);
@@ -76,6 +78,8 @@ const Login = () => {
           theme: "light",
           // transition: Bounce,
         });
+        navigate("/like");
+        setCredentials({ uid: "", password: "" });
       } else {
         toast.warn("😒 Invalid Credentials", {
           position: "top-right",
@@ -103,33 +107,54 @@ const Login = () => {
       });
     }
   };
-  const handleSignup = async () => {
+  const handleSignup = async (e) => {
+    e.preventDefault();
     // setCredentials(uid, password);
-    if (udata.rpassword === cpass) {
-      console.log(udata);
-      // You can perform login logic here using uid and password
-      // console.log("Login clicked with UID:", uid, "and Password:", password);
-      try {
-        const response = await axios.post(
-          "https://authen-app.vercel.app/signup",
-          udata
-        );
-        console.log("Data Added", response.data);
-        // You can handle the login success here
-        if (response.status === 201) {
-          toast.success("User created successfully", {
-            position: "top-right",
-            autoClose: 5000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-            // transition: Bounce,
-          });
-        } else {
-          toast.warn("User Already Exists", {
+    if (udata.rpassword.length >= 8) {
+      if (udata.rpassword === cpass) {
+        // console.log(udata);
+        // You can perform login logic here using uid and password
+        // console.log("Login clicked with UID:", uid, "and Password:", password);
+        try {
+          const response = await axios.post(
+            "http://localhost:5000/signup",
+            udata
+          );
+          // You can handle the login success here
+          if (response.status === 200) {
+            console.log("Registered Successfully", response.data);
+
+            toast.success("User created successfully", {
+              position: "top-right",
+              autoClose: 5000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+              theme: "light",
+              // transition: Bounce,
+            });
+
+            SetCpass("");
+            setData({ ruid: "", rpassword: "" });
+          } else {
+            console.log("User Already Exist", response.data);
+
+            toast.warn("User Already Exist", {
+              position: "top-right",
+              autoClose: 5000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+              theme: "light",
+              // transition: Bounce,
+            });
+          }
+        } catch (error) {
+          toast.error("🪲 There is a BUG in backend", {
             position: "top-right",
             autoClose: 5000,
             hideProgressBar: false,
@@ -141,8 +166,8 @@ const Login = () => {
             // transition: Bounce,
           });
         }
-      } catch (error) {
-        toast.error("🪲 There is a BUG in backend", {
+      } else {
+        toast.warn("Password doesn't match ⚔️", {
           position: "top-right",
           autoClose: 5000,
           hideProgressBar: false,
@@ -155,7 +180,7 @@ const Login = () => {
         });
       }
     } else {
-      toast.warn("Password Same ah Illa BRO 😎", {
+      toast.warn("Password must be 8 characters 😎", {
         position: "top-right",
         autoClose: 5000,
         hideProgressBar: false,
@@ -171,6 +196,7 @@ const Login = () => {
 
   return (
     <div>
+      <Link to="/like">Blogs</Link>;
       <section className="main">
         <div className="form_wrapper">
           <input
@@ -194,75 +220,74 @@ const Login = () => {
           <span className="shape" />
           <div className="form_wrap">
             <div className="form_fild login_form">
-              <div className="input_group">
-                <input
-                  type="email"
-                  className="input"
-                  placeholder="Email Address"
-                  value={credentials.uid}
-                  onChange={handleUidChange}
-                />
-              </div>
-              <div className="input_group">
-                <input
-                  type="password"
-                  className="input"
-                  placeholder="Password"
-                  value={credentials.password}
-                  onChange={handlePasswordChange}
-                />
-              </div>
-              <a onClick={handlePass} className="forgot">
-                Forgot password?
-              </a>
-              <input
-                type="submit"
-                onClick={handleLogin}
-                className="btn"
-                defaultValue="Login"
-              />
+              <form onSubmit={handleLogin}>
+                <div className="input_group">
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Email Address"
+                    value={credentials.uid}
+                    onChange={handleUidChange}
+                  />
+                </div>
+                <div className="input_group">
+                  <input
+                    type="password"
+                    className="input"
+                    placeholder="Password"
+                    value={credentials.password}
+                    onChange={handlePasswordChange}
+                  />
+                </div>
+                <a onClick={workingOn} className="forgot">
+                  Forgot password?
+                </a>
+                <input type="submit" className="btn" defaultValue="Login" />
 
-              <div className="not_mem">
-                <label htmlFor="signup">
-                  Not a member? <span> Signup now</span>
-                </label>
-              </div>
+                <div className="not_mem">
+                  <label htmlFor="signup">
+                    Not a member? <span> Signup now</span>
+                  </label>
+                </div>
+              </form>
             </div>
             <div className="form_fild signup_form">
-              <div className="input_group">
-                <input
-                  type="email"
-                  className="input"
-                  placeholder="Email Address"
-                  value={udata.ruid}
-                  onChange={handleUid}
-                />
-              </div>
-              <div className="input_group">
-                <input
-                  type="password"
-                  className="input"
-                  placeholder="Password"
-                  value={udata.rpassword}
-                  onChange={handlePassword}
-                />
-              </div>
-              <div className="input_group">
-                <input
-                  type="password"
-                  className="input"
-                  placeholder="Confirm Password"
-                  value={cpass}
-                  onChange={handlePassSame}
-                />
-              </div>
+              <form onSubmit={handleSignup}>
+                <div className="input_group">
+                  <input
+                    type="email"
+                    className="input"
+                    placeholder="Email Address"
+                    value={udata.ruid}
+                    onChange={handleUid}
+                  />
+                </div>
+                <div className="input_group">
+                  <input
+                    type="password"
+                    className="input"
+                    placeholder="Password"
+                    value={udata.rpassword}
+                    onChange={handlePassword}
+                  />
+                </div>
+                <div className="input_group">
+                  <input
+                    type="password"
+                    className="input"
+                    placeholder="Confirm Password"
+                    value={cpass}
+                    onChange={handlePassSame}
+                  />
+                </div>
 
-              <input
-                type="submit"
-                onClick={handleSignup}
-                className="btn"
-                defaultValue="Signup"
-              />
+                <input
+                  type="submit"
+                  // onClick={handleSignup}
+                  className="btn"
+                  defaultValue="Signup"
+                />
+              </form>
             </div>
           </div>
         </div>

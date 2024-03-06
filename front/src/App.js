@@ -2,9 +2,10 @@ import { useState } from "react";
 import "./App.css";
 import Login from "./login";
 import Like from "./like";
-import Ques from "./ques";
-// import { Analytics } from "@vercel/analytics/react";
-// import { SpeedInsights } from "@vercel/speed-insights/next";
+// import Ques from "./ques";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import { ToastContainer, toast } from "react-toastify";
 
 import "react-toastify/dist/ReactToastify.css";
@@ -14,7 +15,7 @@ function App() {
 
   return (
     <>
-      <Ques></Ques>
+      {/* <Ques></Ques> */}
       <ToastContainer
         position="top-right"
         autoClose={5000}
@@ -27,9 +28,16 @@ function App() {
         pauseOnHover
         theme="light"
       />
-
-      <Login></Login>
-      <Like></Like>
+      <BrowserRouter>
+        <Routes>
+          <Route index element={<Login />} />
+          {/* <Route path="blogs" element={<Blogs />} /> */}
+          <Route path="like" element={<Like />} />
+          {/* <Route path="*" element={<NoPage />} /> */}
+        </Routes>
+      </BrowserRouter>
+      {/* <Login></Login> */}
+      {/* <Like></Like> */}
     </>
   );
 }

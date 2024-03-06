@@ -9,20 +9,35 @@ import "react-toastify/dist/ReactToastify.css";
 
 const Like = () => {
   const [likes, setLikeCount] = useState(0);
-
+  const [isLiked, setIsLiked] = useState(false);
   const handleLikeClick = async () => {
     // console.log(likes);
+    if (!isLiked) {
+      setIsLiked(true);
+      try {
+        const response = await axios.post(
+          "http://localhost:5000/api/increment-like",
+          likes
+        );
+        // console.log(response.data.likes);
+        if (response.status === 200) {
+          // console.log(response.data.like);
+          setLikeCount(response.data.like);
 
-    try {
-      const response = await axios.post(
-        "https://authen-app.vercel.app/api/increment-like",
-        likes
-      );
-      // console.log(response.data.likes);
-      if (response.status === 200) {
-        setLikeCount(response.data.likes);
-
-        toast.success("😍 Thank You for Your Like", {
+          toast.success("😍 Thank You for Your Like", {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            theme: "light",
+            // transition: Bounce,
+          });
+        }
+      } catch (error) {
+        toast.error("🪲 There is a BUG in backend", {
           position: "top-right",
           autoClose: 5000,
           hideProgressBar: false,
@@ -34,8 +49,8 @@ const Like = () => {
           // transition: Bounce,
         });
       }
-    } catch (error) {
-      toast.error("🪲 There is a BUG in backend", {
+    } else {
+      toast.warn("❤️ Thanks!, But You Already Liked this", {
         position: "top-right",
         autoClose: 5000,
         hideProgressBar: false,
@@ -52,9 +67,7 @@ const Like = () => {
   useEffect(() => {
     const fetchLikeCount = async () => {
       try {
-        const response = await fetch(
-          "https://authen-app.vercel.app/api/like-count"
-        );
+        const response = await fetch("http://localhost:5000/api/like-count");
         // console.log(response);
         const data = await response.json();
         setLikeCount(data.likes);
@@ -78,12 +91,15 @@ const Like = () => {
 
   return (
     <div className="container">
+      <div className="head">
+        <h2>You are Successfully Loged In</h2>
+      </div>
       <div className="like">Did You Like This?</div>
       <div className="likebtn">
         <button className="btn" onClick={handleLikeClick}>
           <span role="img" aria-label="like">
             👍
-            <>{likes}</>
+            {likes}
           </span>
         </button>
       </div>
